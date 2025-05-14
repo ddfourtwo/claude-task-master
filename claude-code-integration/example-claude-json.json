@@ -1,0 +1,39 @@
+{
+    "mcpServers": {
+        "taskmaster-ai": {
+            "command": "npx",
+            "args": [
+                "-y", 
+                "--package=task-master-ai", 
+                "task-master-mcp"
+            ],
+            "env": {
+                "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
+                "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
+                "CLAUDE_CODE_MODE": "true"
+            }
+        }
+    },
+    "version": "1.0.0",
+    "settings": {
+        "defaultModel": "claude-3-sonnet-20240229",
+        "maxContextSize": 200000,
+        "plugins": [
+            {
+                "name": "taskMasterPlugin",
+                "enabled": true,
+                "path": "./node_modules/task-master-ai/claude-code-integration/taskMasterPlugin.mjs"
+            }
+        ]
+    },
+    "tools": {
+        "enabled": true,
+        "allowBash": true,
+        "allowFileSystem": true,
+        "allowNetwork": true
+    },
+    "memory": {
+        "enabled": true,
+        "autoLoadClaude": true
+    }
+}
