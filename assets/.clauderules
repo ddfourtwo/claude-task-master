@@ -6,7 +6,7 @@ Below you will find a variety of important rules spanning:
 ---
 DEV_WORKFLOW
 ---
-description: Guide for using taskmaster-ai MCP server integration for managing task-driven development workflows
+description: Guide for using taskmaster-ai MCP server integration for managing test-task-driven development workflows
 globs: **/*
 filesToApplyRule: **/*
 alwaysApply: true

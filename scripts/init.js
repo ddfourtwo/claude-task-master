@@ -13,11 +13,13 @@
  * For the full license text, see the LICENSE file in the root directory.
  */
 
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path'; // Import resolve
+
 import chalk from 'chalk';
 import figlet from 'figlet';
 import boxen from 'boxen';
@@ -42,6 +44,20 @@ const LOG_LEVELS = {
 const LOG_LEVEL = process.env.LOG_LEVEL
 	? LOG_LEVELS[process.env.LOG_LEVEL.toLowerCase()]
 	: LOG_LEVELS.info;
+
+// Initial dotenv.config() call loads from process.cwd() (invocation directory)
+dotenv.config();
+
+// Explicitly load .env from the application's root directory, overriding existing variables
+const appRoot = resolve(__dirname, '..');
+const appEnvPath = path.join(appRoot, '.env');
+if (fs.existsSync(appEnvPath)) {
+	dotenv.config({ path: appEnvPath, override: true });
+	log('debug', `Loaded .env from application root: ${appEnvPath}`);
+} else {
+	log('debug', `.env not found in application root: ${appEnvPath}`);
+}
+
 
 // Create a color gradient for the banner
 const coolGradient = gradient(['#00b4d8', '#0077b6', '#03045e']);
@@ -321,7 +337,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 			log('info', `${targetPath} already exists`);
 			// Create a separate README file specifically for this project
 			const taskMasterReadmePath = path.join(
-				path.dirname(targetPath),
+				path.dirname(targetDir),
 				'README-task-master.md'
 			);
 			fs.writeFileSync(taskMasterReadmePath, content);
@@ -342,9 +358,22 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 	log('info', `Created file: ${targetPath}`);
 }
 
-// Main function to initialize a new project (No longer needs isInteractive logic)
+// Main function to initialize a new project
 async function initializeProject(options = {}) {
-	// Receives options as argument
+	// Explicitly load .env from the application's root directory, overriding existing variables
+	const appRoot = resolve(__dirname, '..');
+	const appEnvPath = path.join(appRoot, '.env');
+	if (fs.existsSync(appEnvPath)) {
+		dotenv.config({ path: appEnvPath, override: true });
+		log('debug', `Loaded .env from application root: ${appEnvPath}`);
+	} else {
+		log('debug', `.env not found in application root: ${appEnvPath}`);
+	}
+
+
+	// Receives options as argument, including invocationCwd
+	const targetDir = options.invocationCwd || process.cwd(); // Use invocationCwd if provided, otherwise use current process cwd
+
 	// Only display banner if not in silent mode
 	if (!isSilentMode()) {
 		displayBanner();
@@ -380,7 +409,7 @@ async function initializeProject(options = {}) {
 
 		if (dryRun) {
 			log('info', 'DRY RUN MODE: No files will be modified');
-			log('info', 'Would initialize Task Master project');
+			log('info', `Would initialize Task Master project in ${targetDir}`);
 			log('info', 'Would create/update necessary project files');
 			if (addAliases) {
 				log('info', 'Would add shell aliases for task-master');
@@ -390,7 +419,7 @@ async function initializeProject(options = {}) {
 			};
 		}
 
-		createProjectStructure(addAliases, dryRun);
+		createProjectStructure(targetDir, addAliases, dryRun); // Pass targetDir
 	} else {
 		// Interactive logic
 		log('info', 'Required options not provided, proceeding with prompts.');
@@ -417,6 +446,8 @@ async function initializeProject(options = {}) {
 				),
 				chalk.white(addAliasesPrompted ? 'Yes' : 'No')
 			);
+			console.log(chalk.blue('Project directory:'), chalk.white(targetDir));
+
 
 			const confirmInput = await promptQuestion(
 				rl,
@@ -435,7 +466,7 @@ async function initializeProject(options = {}) {
 
 			if (dryRun) {
 				log('info', 'DRY RUN MODE: No files will be modified');
-				log('info', 'Would initialize Task Master project');
+				log('info', `Would initialize Task Master project in ${targetDir}`);
 				log('info', 'Would create/update necessary project files');
 				if (addAliasesPrompted) {
 					log('info', 'Would add shell aliases for task-master');
@@ -446,7 +477,7 @@ async function initializeProject(options = {}) {
 			}
 
 			// Create structure using only necessary values
-			createProjectStructure(addAliasesPrompted, dryRun);
+			createProjectStructure(targetDir, addAliasesPrompted, dryRun); // Pass targetDir
 		} catch (error) {
 			rl.close();
 			log('error', `Error during initialization process: ${error.message}`);
@@ -465,9 +496,8 @@ function promptQuestion(rl, question) {
 }
 
 // Function to create the project structure
-function createProjectStructure(addAliases, dryRun) {
-	const targetDir = process.cwd();
-	log('info', `Initializing project in ${targetDir}`);
+function createProjectStructure(targetDir, addAliases, dryRun) {
+	log('info', `Creating project structure in ${targetDir}`);
 
 	// Check for CLAUDE_CODE_MODE in env variables
 	const isClaudeCodeMode = process.env.CLAUDE_CODE_MODE === 'true';
@@ -500,11 +530,13 @@ function createProjectStructure(addAliases, dryRun) {
 		if (!isSilentMode()) {
 			console.log(
 				boxen(
-					chalk.bold.cyan('Claude Code Mode Detected!') + 
-					'\n\n' + 
+					chalk.bold.cyan('Claude Code Mode Detected!') +
+					'\n\n' +
 					chalk.white('Task Master will configure for Claude Code integration') +
 					'\n' +
 					chalk.white('- Creating CLAUDE.md with task content placeholders') +
+					'\n' +
+					chalk.white('- Setting up Claude Code specific MCP configuration (.mcp.json)') + // Corrected message
 					'\n' +
 					chalk.white('- Setting up example Claude Code configuration'),
 					{
@@ -518,9 +550,10 @@ function createProjectStructure(addAliases, dryRun) {
 		} else {
 			console.log(chalk.blue('Detected Claude Code mode from environment variable'));
 		}
-		setupClaudeCodeConfiguration(targetDir);
+		setupClaudeCodeConfiguration(targetDir); // Handles CLAUDE.md
+		setupClaudeCodeMCPConfiguration(targetDir); // Handles .mcp.json
 	} else {
-		setupMCPConfiguration(targetDir);
+		setupMCPConfiguration(targetDir); // Handles standard MCP setup
 	}
 
 	// Copy template files with replacements
@@ -657,47 +690,48 @@ function createProjectStructure(addAliases, dryRun) {
 	// === Add Model Configuration Step ===
 	if (!isSilentMode() && !dryRun) {
 		// Handle both Claude Code and standard modes for model setup
-		if (isClaudeCodeMode) {
-			console.log(
-				boxen(chalk.cyan('Claude Code API Setup'), {
-					padding: 0.5,
-					margin: { top: 1, bottom: 0.5 },
-					borderStyle: 'round',
-					borderColor: 'blue'
-				})
-			);
+		// if (isClaudeCodeMode) {
+		// 	console.log(
+		// 		boxen(chalk.cyan('Claude Code API Setup'), {
+		// 			padding: 0.5,
+		// 			margin: { top: 1, bottom: 0.5 },
+		// 			borderStyle: 'round',
+		// 			borderColor: 'blue'
+		// 		})
+		// 	);
 			
-			// First ensure task-master-ai is installed locally
-			log('info', 'Installing task-master-ai package for model setup...');
-			try {
-				execSync('npm install --no-save task-master-ai', {
-					stdio: 'inherit',
-					cwd: targetDir
-				});
-				log('success', 'Local package installed for model setup.');
+		// 	// First ensure task-master-ai is installed locally
+		// 	log('info', 'Installing task-master-ai package for model setup...');
+		// 	try {
+		// 		execSync('npm install --no-save task-master-ai', {
+		// 			stdio: 'inherit',
+		// 			cwd: targetDir
+		// 		});
+		// 		log('success', 'Local package installed for model setup.');
 				
-				// Now run the interactive setup
-				log('info', 'Running interactive model setup for Claude Code mode...');
-				try {
-					execSync('npx task-master models --setup', { 
-						stdio: 'inherit',
-						cwd: targetDir,
-						env: { ...process.env, CLAUDE_CODE_MODE: 'true' } 
-					});
-					log('success', 'AI Models configured.');
-				} catch (setupError) {
-					log('error', 'Failed to configure AI models:', setupError.message);
-					log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
-					log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
-					log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
-				}
-			} catch (installError) {
-				log('error', 'Failed to install local package:', installError.message);
-				log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
-				log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
-				log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
-			}
-		} else {
+		// 		// Now run the interactive setup
+		// 		log('info', 'Running interactive model setup for Claude Code mode...');
+		// 		try {
+		// 			execSync('npx task-master models --setup', { 
+		// 				stdio: 'inherit',
+		// 				cwd: targetDir,
+		// 				env: { ...process.env, CLAUDE_CODE_MODE: 'true' } 
+		// 			});
+		// 			log('success', 'AI Models configured.');
+		// 		} catch (setupError) {
+		// 			log('error', 'Failed to configure AI models:', setupError.message);
+		// 			log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
+		// 			log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
+		// 			log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
+		// 		}
+		// 	} catch (installError) {
+		// 		log('error', 'Failed to install local package:', installError.message);
+		// 		log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
+		// 		log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
+		// 		log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
+				
+		// 	}
+		// } else {
 			// Standard model setup for non-Claude Code mode
 			console.log(
 				boxen(chalk.cyan('Configuring AI Models...'), {
@@ -712,25 +746,25 @@ function createProjectStructure(addAliases, dryRun) {
 				'Running interactive model setup. Please select your preferred AI models.'
 			);
 			try {
-				execSync('npx task-master models --setup', {
+				execSync('task-master models --setup', {
 					stdio: 'inherit',
 					cwd: targetDir
 				});
 				log('success', 'AI Models configured.');
 			} catch (error) {
-				log('error', 'Failed to configure AI models:', error.message);
+				log('error', `Failed to configure AI models: ${error.message}`);
 				log('warn', 'You may need to run "task-master models --setup" manually.');
 			}
 		}
-	} else if (isSilentMode() && !dryRun) {
-		log('info', 'Skipping interactive model setup in silent (MCP) mode.');
-		log(
-			'warn',
-			'Please configure AI models using "task-master models --set-..." or the "models" MCP tool.'
-		);
-	} else if (dryRun) {
-		log('info', 'DRY RUN: Skipping interactive model setup.');
-	}
+	// } else if (isSilentMode() && !dryRun) {
+	// 	log('info', 'Skipping interactive model setup in silent (MCP) mode.');
+	// 	log(
+	// 		'warn',
+	// 		'Please configure AI models using "task-master models --set-..." or the "models" MCP tool.'
+	// 	);
+	// } else if (dryRun) {
+	// 	log('info', 'DRY RUN: Skipping interactive model setup.');
+	// }
 	// ====================================
 
 	// Display success message
@@ -839,7 +873,10 @@ function createProjectStructure(addAliases, dryRun) {
 	}
 }
 
-// Function to setup MCP configuration for Cursor integration
+/**
+ * Function to setup MCP configuration for Cursor integration
+ * @param {string} targetDir - Target directory for the project
+ */
 function setupMCPConfiguration(targetDir) {
 	const mcpDirPath = path.join(targetDir, '.cursor');
 	const mcpJsonPath = path.join(mcpDirPath, 'mcp.json');
@@ -988,6 +1025,74 @@ This file contains context information for Claude.
 	}
 	
 	log('info', 'Claude Code integration setup completed');
+}
+
+/**
+ * Setup Claude Code specific MCP configuration (.mcp.json)
+ * @param {string} targetDir - Target directory for the project (where init was invoked)
+ */
+function setupClaudeCodeMCPConfiguration(targetDir) {
+	const mcpJsonPath = path.join(targetDir, '.mcp.json'); // Corrected path
+
+	log('info', 'Setting up Claude Code specific MCP configuration...');
+
+	// No need to create .cursor directory here
+
+	// Get the current working directory name to use as default user ID
+	const cwdName = path.basename(targetDir);
+	const defaultUserId = cwdName !== '' ? cwdName : 'default_user';
+
+	// Read environment variables directly
+	const anthropicApiKey = process.env.ANTHROPIC_API_KEY || 'YOUR_ANTHROPIC_API_KEY_HERE';
+	const perplexityApiKey = process.env.PERPLEXITY_API_KEY || 'YOUR_PERPLEXITY_API_KEY_HERE';
+	const mem0ApiKey = process.env.MEM0_API_KEY || 'YOUR_MEM0_API_KEY_HERE';
+
+
+	// Claude Code specific MCP config with direct values
+	const claudeCodeMCPConfig = {
+		mcpServers: {
+			'mem0-memory': {
+				command: 'node',
+				args: [
+					'/Users/daniel/Documents/GitHub/mem0-mcp/node/mem0/build/index.js'
+				],
+				env: {
+					MEM0_API_KEY: mem0ApiKey, // Use actual value
+					DEFAULT_USER_ID: defaultUserId // Use actual value
+				},
+				autoApprove: [
+					'*'
+				],
+				disabled: false,
+				timeout: 60,
+				transportType: 'stdio'
+			},
+			'taskmaster-ai': {
+				command: 'npx',
+				args: [
+					'-y',
+					'--package=task-master-ai',
+					'task-master-mcp'
+				],
+				autoApprove: [
+					'*'
+				],
+				env: {
+					ANTHROPIC_API_KEY: anthropicApiKey, // Use actual value
+					PERPLEXITY_API_KEY: perplexityApiKey, // Use actual value
+					CLAUDE_CODE_MODE: 'true' // Keep as string literal
+				}
+			}
+		}
+	};
+
+	// Write the configuration file, overwriting if it exists
+	try {
+		fs.writeFileSync(mcpJsonPath, JSON.stringify(claudeCodeMCPConfig, null, 4));
+		log('success', 'Created Claude Code specific MCP configuration file');
+	} catch (error) {
+		log('error', `Failed to create Claude Code specific MCP configuration: ${error.message}`);
+	}
 }
 
 
