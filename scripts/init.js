@@ -19,6 +19,7 @@ import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path'; // Import resolve
+import os from 'os'; // Import os module
 
 import chalk from 'chalk';
 import figlet from 'figlet';
@@ -1137,7 +1138,7 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 			'mem0-memory': {
 				command: 'node',
 				args: [
-					'~/Documents/GitHub/mem0-mcp/node/mem0/build/index.js'
+					path.join(os.homedir(), 'Documents', 'GitHub', 'mem0-mcp', 'node', 'mem0', 'build', 'index.js')
 				],
 				env: {
 					MEM0_API_KEY: mem0ApiKey, // Use actual value
@@ -1151,7 +1152,7 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 			'taskmaster-ai': {
 				command: 'node',
 				args: [
-					'~/Documents/GitHub/claude-task-master/mcp-server/server.js',
+					path.join(os.homedir(), 'Documents', 'GitHub', 'claude-task-master', 'mcp-server', 'server.js'),
 				],
 				autoApprove: '*',
 				env: {
@@ -1163,12 +1164,44 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 		}
 	};
 
-	// Write the configuration file, overwriting if it exists
+	// Read existing configuration if it exists
+	let existingConfig = {};
+	let fileExists = false;
+	if (fs.existsSync(mcpJsonPath)) {
+		fileExists = true;
+		log('info', `MCP configuration file found at ${mcpJsonPath}, attempting to read and merge...`);
+		try {
+			const rawContent = fs.readFileSync(mcpJsonPath, 'utf8');
+			existingConfig = JSON.parse(rawContent);
+		} catch (error) {
+			log('warn', `Failed to parse existing MCP configuration file: ${error.message}. Creating a new one.`);
+			// If parsing fails, treat it as if the file didn't exist
+			existingConfig = {};
+			fileExists = false; // Reset fileExists flag
+		}
+	} else {
+		log('info', `MCP configuration file not found at ${mcpJsonPath}, creating a new one.`);
+	}
+
+	// Ensure mcpServers object exists in the existing config
+	if (!existingConfig.mcpServers) {
+		existingConfig.mcpServers = {};
+	}
+
+	// Merge the new Claude Code specific servers into the existing configuration
+	// This will add the servers if they don't exist or update them if they do
+	Object.assign(existingConfig.mcpServers, claudeCodeMCPConfig.mcpServers);
+
+	// Write the merged configuration file
 	try {
-		fs.writeFileSync(mcpJsonPath, JSON.stringify(claudeCodeMCPConfig, null, 4));
-		log('success', 'Created Claude Code specific MCP configuration file');
+		fs.writeFileSync(mcpJsonPath, JSON.stringify(existingConfig, null, 4));
+		if (fileExists) {
+			log('success', 'Updated Claude Code specific MCP configuration file');
+		} else {
+			log('success', 'Created Claude Code specific MCP configuration file');
+		}
 	} catch (error) {
-		log('error', `Failed to create Claude Code specific MCP configuration: ${error.message}`);
+		log('error', `Failed to write Claude Code specific MCP configuration: ${error.message}`);
 	}
 }
 
