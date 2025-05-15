@@ -198,7 +198,7 @@ describe('Commands Module', () => {
 		async function parsePrdAction(file, options) {
 			// Use input option if file argument not provided
 			const inputFile = file || options.input;
-			const defaultPrdPath = 'scripts/prd.txt';
+			const defaultPrdPath = 'prd.md';
 			const append = options.append || false;
 			const force = options.force || false;
 			const outputPath = options.output || 'tasks/tasks.json';
@@ -233,7 +233,7 @@ describe('Commands Module', () => {
 
 				console.log(
 					chalk.yellow(
-						'No PRD file specified and default PRD file not found at scripts/prd.txt.'
+						'No PRD file specified and default PRD file not found at prd.md.'
 					)
 				);
 				return;
@@ -272,12 +272,12 @@ describe('Commands Module', () => {
 			});
 
 			// Assert
-			expect(mockExistsSync).toHaveBeenCalledWith('scripts/prd.txt');
+			expect(mockExistsSync).toHaveBeenCalledWith('prd.md');
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining('Using default PRD file')
 			);
 			expect(mockParsePRD).toHaveBeenCalledWith(
-				'scripts/prd.txt',
+				'prd.md',
 				'tasks/tasks.json',
 				10, // Default value from command definition
 				{ append: false }
@@ -303,7 +303,7 @@ describe('Commands Module', () => {
 
 		test('should use explicitly provided file path', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 
 			// Act - call the handler directly with the right params
 			await parsePrdAction(testFile, {
@@ -321,12 +321,12 @@ describe('Commands Module', () => {
 				10,
 				{ append: false }
 			);
-			expect(mockExistsSync).not.toHaveBeenCalledWith('scripts/prd.txt');
+			expect(mockExistsSync).not.toHaveBeenCalledWith('prd.md');
 		});
 
 		test('should use file path from input option when provided', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 
 			// Act - call the handler directly with the right params
 			await parsePrdAction(undefined, {
@@ -345,12 +345,12 @@ describe('Commands Module', () => {
 				10,
 				{ append: false }
 			);
-			expect(mockExistsSync).not.toHaveBeenCalledWith('scripts/prd.txt');
+			expect(mockExistsSync).not.toHaveBeenCalledWith('prd.md');
 		});
 
 		test('should respect numTasks and output options', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 			const outputFile = 'custom/output.json';
 			const numTasks = 15;
 
@@ -371,7 +371,7 @@ describe('Commands Module', () => {
 
 		test('should pass append flag to parsePRD when provided', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 
 			// Act - call the handler directly with append flag
 			await parsePrdAction(testFile, {
@@ -394,7 +394,7 @@ describe('Commands Module', () => {
 
 		test('should bypass confirmation when append flag is true and tasks.json exists', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 			const outputFile = 'tasks/tasks.json';
 
 			// Mock that tasks.json exists
@@ -424,7 +424,7 @@ describe('Commands Module', () => {
 
 		test('should prompt for confirmation when append flag is false and tasks.json exists', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 			const outputFile = 'tasks/tasks.json';
 
 			// Mock that tasks.json exists
@@ -454,7 +454,7 @@ describe('Commands Module', () => {
 
 		test('should bypass confirmation when force flag is true, regardless of append flag', async () => {
 			// Arrange
-			const testFile = 'test/prd.txt';
+			const testFile = 'test/prd.md';
 			const outputFile = 'tasks/tasks.json';
 
 			// Mock that tasks.json exists

@@ -322,7 +322,7 @@ export function findPRDDocumentPath(projectRoot, explicitPath, log) {
 		'scripts/'
 	];
 
-	const commonFileNames = ['PRD.md', 'prd.md', 'PRD.txt', 'prd.txt'];
+	const commonFileNames = ['PRD.md', 'prd.md', 'PRD.txt', 'prd.md'];
 
 	// Check all possible combinations
 	for (const location of commonLocations) {

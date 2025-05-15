@@ -20,12 +20,12 @@ export function registerParsePRDTool(server) {
 	server.addTool({
 		name: 'parse_prd',
 		description:
-			"Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.txt file in the project root's scripts/ directory.",
+			"Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.md file in the project root's scripts/ directory.",
 		parameters: z.object({
 			input: z
 				.string()
 				.optional()
-				.default('scripts/prd.txt')
+				.default('prd.md')
 				.describe('Absolute path to the PRD document file (.txt, .md, etc.)'),
 			numTasks: z
 				.string()

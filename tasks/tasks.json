@@ -2,7 +2,7 @@
   "meta": {
     "projectName": "Your Project Name",
     "version": "1.0.0",
-    "source": "scripts/prd.txt",
+    "source": "prd.md",
     "description": "Tasks generated from PRD",
     "totalTasksGenerated": 20,
     "tasksIncluded": 20

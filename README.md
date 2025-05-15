@@ -54,7 +54,7 @@ Can you please initialize taskmaster-ai into my project?
 4. **Use common commands** directly through your AI assistant:
 
 ```txt
-Can you parse my PRD at scripts/prd.txt?
+Can you parse my PRD at prd.md?
 What's the next task I should work on?
 Can you help me implement task 3?
 Can you help me expand task 4?
@@ -91,7 +91,7 @@ This will prompt you for project details and set up a new project with the neces
 task-master init
 
 # Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
+task-master parse-prd your-prd.md
 
 # List all tasks
 task-master list

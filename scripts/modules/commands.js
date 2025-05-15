@@ -510,7 +510,7 @@ function registerCommands(programInstance) {
 		.action(async (file, options) => {
 			// Use input option if file argument not provided
 			const inputFile = file || options.input;
-			const defaultPrdPath = 'scripts/prd.txt';
+			const defaultPrdPath = 'prd.md';
 			const numTasks = parseInt(options.numTasks, 10);
 			const outputPath = options.output;
 			const force = options.force || false;
@@ -555,7 +555,7 @@ function registerCommands(programInstance) {
 
 					console.log(
 						chalk.yellow(
-							'No PRD file specified and default PRD file not found at scripts/prd.txt.'
+							'No PRD file specified and default PRD file not found at prd.md.'
 						)
 					);
 					console.log(
@@ -580,7 +580,7 @@ function registerCommands(programInstance) {
 								'  task-master parse-prd requirements_v2.txt --append\n\n' +
 								chalk.yellow('Note: This command will:') +
 								'\n' +
-								'  1. Look for a PRD file at scripts/prd.txt by default\n' +
+								'  1. Look for a PRD file at prd.md by default\n' +
 								'  2. Use the file specified by --input or positional argument if provided\n' +
 								'  3. Generate tasks from the PRD and either:\n' +
 								'     - Overwrite any existing tasks.json file (default)\n' +

@@ -64,7 +64,7 @@ const coolGradient = gradient(['#00b4d8', '#0077b6', '#03045e']);
 const warmGradient = gradient(['#fb8b24', '#e36414', '#9a031e']);
 
 // Display a fancy banner
-function displayBanner() {
+function displayBanner(isClaudeCodeMode = false) {
 	if (isSilentMode()) return;
 
 	console.clear();
@@ -81,14 +81,26 @@ function displayBanner() {
 		chalk.dim('by ') + chalk.cyan.underline('https://x.com/eyaltoledano')
 	);
 
-	console.log(
-		boxen(chalk.white(`${chalk.bold('Initializing')} your new project`), {
-			padding: 1,
-			margin: { top: 0, bottom: 1 },
-			borderStyle: 'round',
-			borderColor: 'cyan'
-		})
-	);
+	// Display different message for Claude Code mode
+	if (isClaudeCodeMode) {
+		console.log(
+			boxen(chalk.white(`${chalk.bold('Initializing')} with ${chalk.cyan.bold('Claude Code')} integration`), {
+				padding: 1,
+				margin: { top: 0, bottom: 1 },
+				borderStyle: 'round',
+				borderColor: 'cyan'
+			})
+		);
+	} else {
+		console.log(
+			boxen(chalk.white(`${chalk.bold('Initializing')} your new project`), {
+				padding: 1,
+				margin: { top: 0, bottom: 1 },
+				borderStyle: 'round',
+				borderColor: 'cyan'
+			})
+		);
+	}
 }
 
 // Logging function with icons and colors
@@ -359,7 +371,22 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 }
 
 // Main function to initialize a new project
+// Supports both --claude-code-mode flag and options.claudeCodeMode parameter
 async function initializeProject(options = {}) {
+	// Check for --claude-code-mode in argv (helpful for debugging)
+	const argv = process.argv || [];
+	const hasClaudeCodeFlag = argv.some(arg => 
+		arg === '--claude-code-mode' || 
+		arg === '--claude-code'
+	); 
+	
+	if (hasClaudeCodeFlag) {
+		log('info', 'Found --claude-code-mode flag in process arguments, enabling Claude Code mode');
+		options.claudeCodeMode = true;
+	} else {
+		log('debug', 'No --claude-code-mode flag found in process.argv:', argv);
+	}
+	
 	// Explicitly load .env from the application's root directory, overriding existing variables
 	const appRoot = resolve(__dirname, '..');
 	const appEnvPath = path.join(appRoot, '.env');
@@ -370,13 +397,55 @@ async function initializeProject(options = {}) {
 		log('debug', `.env not found in application root: ${appEnvPath}`);
 	}
 
+	// Determine if we're in Claude Code mode from multiple sources (priority order)
+	// 1. Direct option flag
+	// 2. Environment variable from options.env
+	// 3. Current process.env
+	let isClaudeCodeMode = options.claudeCodeMode === true; 
+	
+	// If environment variables were provided in options, set them in process.env
+	if (options.env) {
+		Object.entries(options.env).forEach(([key, value]) => {
+			if (value !== undefined) {
+				process.env[key] = value;
+				log('debug', `Set environment variable from options: ${key}=${value}`);
+				
+				// Check if this is setting CLAUDE_CODE_MODE
+				if (key === 'CLAUDE_CODE_MODE' && value === 'true') {
+					isClaudeCodeMode = true;
+					log('info', 'Setting Claude Code mode based on options.env.CLAUDE_CODE_MODE');
+				}
+			}
+		});
+	}
+	
+	// If still not set, check the current process.env
+	if (!isClaudeCodeMode) {
+		isClaudeCodeMode = process.env.CLAUDE_CODE_MODE === 'true';
+		if (isClaudeCodeMode) {
+			log('info', 'Setting Claude Code mode based on process.env.CLAUDE_CODE_MODE');
+		}
+	}
+	
+	// Extra verbose logging for MCP debugging purposes
+	log('info', `Claude Code Mode determination:
+		- From process.argv (--claude-code-mode flag): ${hasClaudeCodeFlag}
+		- From options.claudeCodeMode: ${options.claudeCodeMode === true}
+		- From options.env.CLAUDE_CODE_MODE: ${options.env?.CLAUDE_CODE_MODE === 'true'}
+		- From process.env.CLAUDE_CODE_MODE: ${process.env.CLAUDE_CODE_MODE === 'true'}
+		- Final decision: ${isClaudeCodeMode}
+		- process.argv: ${JSON.stringify(process.argv)}`);
+	
+	// Force the environment variable to reflect the final decision
+	process.env.CLAUDE_CODE_MODE = isClaudeCodeMode ? 'true' : 'false';
+	log('info', `Final CLAUDE_CODE_MODE environment variable set to: ${process.env.CLAUDE_CODE_MODE}`);
 
 	// Receives options as argument, including invocationCwd
 	const targetDir = options.invocationCwd || process.cwd(); // Use invocationCwd if provided, otherwise use current process cwd
 
 	// Only display banner if not in silent mode
 	if (!isSilentMode()) {
-		displayBanner();
+		displayBanner(isClaudeCodeMode);
 	}
 
 	// Debug logging only if not in silent mode
@@ -501,6 +570,20 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 
 	// Check for CLAUDE_CODE_MODE in env variables
 	const isClaudeCodeMode = process.env.CLAUDE_CODE_MODE === 'true';
+	log('info', `Creating project with Claude Code Mode: ${isClaudeCodeMode ? 'ENABLED' : 'DISABLED'}`);
+	
+	// Extra debug logging to understand the environment
+	if (!isSilentMode()) {
+		console.log(boxen(
+			chalk.white(`Claude Code Mode: ${isClaudeCodeMode ? chalk.green.bold('ENABLED') : chalk.yellow.bold('DISABLED')}`),
+			{
+				padding: 0.5,
+				margin: 0.5,
+				borderStyle: 'round',
+				borderColor: isClaudeCodeMode ? 'green' : 'yellow'
+			}
+		));
+	}
 
 	// Create required directories for all modes
 	ensureDirectoryExists(path.join(targetDir, 'scripts'));
@@ -708,11 +791,11 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 		// 			cwd: targetDir
 		// 		});
 		// 		log('success', 'Local package installed for model setup.');
-				
+			
 		// 		// Now run the interactive setup
 		// 		log('info', 'Running interactive model setup for Claude Code mode...');
 		// 		try {
-		// 			execSync('npx task-master models --setup', { 
+		// 			execSync('npx task-master models --setup --claude-code-mode', { 
 		// 				stdio: 'inherit',
 		// 				cwd: targetDir,
 		// 				env: { ...process.env, CLAUDE_CODE_MODE: 'true' } 
@@ -819,7 +902,7 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 					chalk.dim('MCP Tool: ') +
 					chalk.cyan('parse_prd') +
 					chalk.dim(' | CLI: ') +
-					chalk.cyan('task-master parse-prd scripts/prd.txt') +
+					chalk.cyan('task-master parse-prd prd.md') +
 					'\n' +
 					chalk.white('4. ') +
 					chalk.yellow(
@@ -1054,33 +1137,27 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 			'mem0-memory': {
 				command: 'node',
 				args: [
-					'/Users/daniel/Documents/GitHub/mem0-mcp/node/mem0/build/index.js'
+					'~/Documents/GitHub/mem0-mcp/node/mem0/build/index.js'
 				],
 				env: {
 					MEM0_API_KEY: mem0ApiKey, // Use actual value
 					DEFAULT_USER_ID: defaultUserId // Use actual value
 				},
-				autoApprove: [
-					'*'
-				],
+				autoApprove: '*',
 				disabled: false,
 				timeout: 60,
 				transportType: 'stdio'
 			},
 			'taskmaster-ai': {
-				command: 'npx',
+				command: 'node',
 				args: [
-					'-y',
-					'--package=task-master-ai',
-					'task-master-mcp'
+					'~/Documents/GitHub/claude-task-master/mcp-server/server.js',
 				],
-				autoApprove: [
-					'*'
-				],
+				autoApprove: '*',
 				env: {
 					ANTHROPIC_API_KEY: anthropicApiKey, // Use actual value
 					PERPLEXITY_API_KEY: perplexityApiKey, // Use actual value
-					CLAUDE_CODE_MODE: 'true' // Keep as string literal
+					CLAUDE_CODE_MODE: 'true' // Explicitly set environment variable as well
 				}
 			}
 		}

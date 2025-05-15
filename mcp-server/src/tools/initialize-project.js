@@ -31,6 +31,13 @@ export function registerInitializeProjectTool(server) {
 				.describe(
 					'Skip prompts and use default values. Always set to true for MCP tools.'
 				),
+			claudeCodeMode: z
+				.boolean()
+				.optional()
+				.default(false)
+				.describe(
+					'Enable Claude Code mode for the project, which sets up Claude Code specific configurations.'
+				),
 			projectRoot: z
 				.string()
 				.describe(
@@ -42,6 +49,17 @@ export function registerInitializeProjectTool(server) {
 			const session = context.session;
 
 			try {
+				// Log current environment settings and args
+				log.info(`Environment CLAUDE_CODE_MODE: ${process.env.CLAUDE_CODE_MODE}`);
+				log.info(`Received args.claudeCodeMode: ${args.claudeCodeMode}`);
+				log.info(`process.argv: ${JSON.stringify(process.argv)}`);
+				
+				// If claudeCodeMode is explicitly set in args, make sure it's properly propagated
+				if (args.claudeCodeMode === true) {
+					log.info('Explicit claudeCodeMode=true detected in args, will be passed to direct function');
+				}
+				
+				// Log full args for debugging
 				log.info(
 					`Executing initialize_project tool with args: ${JSON.stringify(args)}`
 				);

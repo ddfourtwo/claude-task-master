@@ -679,15 +679,15 @@ describe('Task Manager Module', () => {
 
 		test('should parse a PRD file and generate tasks', async () => {
 			// Call the test version of parsePRD
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify fs.readFileSync was called with the correct arguments
-			expect(mockReadFileSync).toHaveBeenCalledWith('path/to/prd.txt', 'utf8');
+			expect(mockReadFileSync).toHaveBeenCalledWith('path/to/prd.md', 'utf8');
 
 			// Verify callClaude was called with the correct arguments
 			expect(mockCallClaude).toHaveBeenCalledWith(
 				samplePRDContent,
-				'path/to/prd.txt',
+				'path/to/prd.md',
 				3
 			);
 
@@ -717,7 +717,7 @@ describe('Task Manager Module', () => {
 			});
 
 			// Call the function
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify mkdir was called
 			expect(mockMkdirSync).toHaveBeenCalledWith('tasks', { recursive: true });
@@ -737,7 +737,7 @@ describe('Task Manager Module', () => {
 				.mockImplementation(() => {});
 
 			// Call the function
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify error handling
 			expect(mockConsoleError).toHaveBeenCalled();
@@ -750,7 +750,7 @@ describe('Task Manager Module', () => {
 
 		test('should generate individual task files after creating tasks.json', async () => {
 			// Call the function
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify generateTaskFiles was called
 			expect(mockGenerateTaskFiles).toHaveBeenCalledWith(
@@ -768,7 +768,7 @@ describe('Task Manager Module', () => {
 			});
 
 			// Call the function
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify prompt was called with expected message
 			expect(mockPromptYesNo).toHaveBeenCalledWith(
@@ -801,7 +801,7 @@ describe('Task Manager Module', () => {
 
 			// Call the function
 			const result = await testParsePRD(
-				'path/to/prd.txt',
+				'path/to/prd.md',
 				'tasks/tasks.json',
 				3
 			);
@@ -836,7 +836,7 @@ describe('Task Manager Module', () => {
 			});
 
 			// Call the function
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3);
 
 			// Verify prompt was NOT called
 			expect(mockPromptYesNo).not.toHaveBeenCalled();
@@ -865,7 +865,7 @@ describe('Task Manager Module', () => {
 
 			// Call the function with append option
 			const result = await testParsePRD(
-				'path/to/prd.txt',
+				'path/to/prd.md',
 				'tasks/tasks.json',
 				2,
 				{ append: true }
@@ -900,7 +900,7 @@ describe('Task Manager Module', () => {
 			});
 
 			// Call the function with append option
-			await testParsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
+			await testParsePRD('path/to/prd.md', 'tasks/tasks.json', 3, {
 				append: true
 			});
 

@@ -74,7 +74,7 @@ Once configured, Task Master will:
 To interact with Task Master from Claude Code:
 
 1. **Initialize a project**: `task-master init`
-2. **Parse a PRD**: `task-master parse-prd scripts/prd.txt`
+2. **Parse a PRD**: `task-master parse-prd prd.md`
 3. **Analyze task complexity**: `task-master analyze-complexity`
 4. **Expand tasks**: `task-master expand --all`
 5. **Get the next task**: `task-master next`

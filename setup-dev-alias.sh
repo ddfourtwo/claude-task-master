@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Make task-master.js executable
-chmod +x /Users/daniel/Documents/GitHub/claude-task-master/bin/task-master.js
+chmod +x ~/Documents/GitHub/claude-task-master/bin/task-master.js
 
 # Determine which shell configuration file to use
 if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
@@ -22,7 +22,7 @@ else
     # Add the alias
     echo "" >> "$CONFIG_FILE"
     echo "# Task Master development alias" >> "$CONFIG_FILE"
-    echo "alias task-master='/Users/daniel/Documents/GitHub/claude-task-master/bin/task-master.js'" >> "$CONFIG_FILE"
+    echo "alias task-master='~/Documents/GitHub/claude-task-master/bin/task-master.js'" >> "$CONFIG_FILE"
     echo "Added task-master alias to $CONFIG_FILE"
 fi
 
