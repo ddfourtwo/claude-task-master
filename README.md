@@ -72,6 +72,32 @@ npm install -g task-master-ai
 npm install task-master-ai
 ```
 
+#### Local Development Installation
+
+For developers who want to make changes and test locally:
+
+```bash
+# Clone the repository
+git clone https://github.com/eyaltoledano/claude-task-master.git
+cd claude-task-master
+
+# Run the installation script
+./install.sh
+
+# Now you can use the local version
+task-master --version
+npx task-master --version
+npx task-master-ai  # For MCP server
+```
+
+This creates a complete development environment with:
+- Direct executable commands
+- npx support for all commands
+- Multiple MCP configuration options
+- Immediate code reflection (no reinstall needed)
+
+See [INSTALL-LOCAL.md](INSTALL-LOCAL.md) for detailed installation options and configurations.
+
 #### Initialize a new project
 
 ```bash
