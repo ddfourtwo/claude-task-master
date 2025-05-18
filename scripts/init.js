@@ -327,6 +327,47 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 			return;
 		}
 
+		// Handle CLAUDE.md - special merging logic
+		if (filename === 'CLAUDE.md') {
+			log('info', `${targetPath} already exists, checking for RULES tag...`);
+			const existingContent = fs.readFileSync(targetPath, 'utf8');
+			
+			// Extract RULES content from the source CLAUDE_RULES.md
+			const rulesMatch = content.match(/<RULES>([\s\S]*)<\/RULES>/);
+			if (!rulesMatch) {
+				log('error', 'Could not find RULES tag in CLAUDE_RULES.md');
+				return;
+			}
+			const rulesContent = rulesMatch[0]; // Include the full tags
+			
+			// Check if existing file has RULES tags
+			if (existingContent.includes('<RULES>')) {
+				// Replace existing RULES content
+				let updatedContent = existingContent.replace(/<RULES>[\s\S]*<\/RULES>/, rulesContent);
+				
+				// Ensure TASKS tags exist after RULES
+				if (!updatedContent.includes('<TASKS>')) {
+					// Find where </RULES> ends and add TASKS after it
+					const rulesEndIndex = updatedContent.indexOf('</RULES>');
+					if (rulesEndIndex !== -1) {
+						const afterRulesIndex = rulesEndIndex + '</RULES>'.length;
+						updatedContent = updatedContent.slice(0, afterRulesIndex) + 
+							'\n\n<TASKS>\n\n</TASKS>' + 
+							updatedContent.slice(afterRulesIndex);
+					}
+				}
+				
+				fs.writeFileSync(targetPath, updatedContent);
+				log('success', `Updated ${targetPath} - replaced existing RULES content and ensured TASKS tags`);
+			} else {
+				// Add RULES tags and content, followed by TASKS tags
+				const updatedContent = existingContent.trim() + '\n\n' + rulesContent + '\n\n<TASKS>\n\n</TASKS>\n';
+				fs.writeFileSync(targetPath, updatedContent);
+				log('success', `Updated ${targetPath} - added RULES content and TASKS tags`);
+			}
+			return;
+		}
+
 		// Handle .windsurfrules - append the entire content
 		if (filename === '.windsurfrules') {
 			log(
@@ -366,9 +407,36 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 		return;
 	}
 
-	// If the file doesn't exist, create it normally
-	fs.writeFileSync(targetPath, content);
-	log('info', `Created file: ${targetPath}`);
+	// If the file doesn't exist, handle special cases for new files
+	const filename = path.basename(targetPath);
+	
+	if (filename === 'CLAUDE.md') {
+		// For new CLAUDE.md, ensure we include the RULES content properly with TASKS
+		const rulesMatch = content.match(/<RULES>([\s\S]*)<\/RULES>/);
+		let finalContent;
+		
+		if (rulesMatch) {
+			// If source has RULES tags, add TASKS tags after
+			finalContent = content + '\n\n<TASKS>\n\n</TASKS>\n';
+		} else {
+			// If source doesn't have RULES tags, wrap content in RULES and add TASKS
+			finalContent = `<RULES>
+${content}
+</RULES>
+
+<TASKS>
+
+</TASKS>
+`;
+		}
+		
+		fs.writeFileSync(targetPath, finalContent);
+		log('info', `Created file: ${targetPath} with RULES content and TASKS tags`);
+	} else {
+		// For other files, create normally
+		fs.writeFileSync(targetPath, content);
+		log('info', `Created file: ${targetPath}`);
+	}
 }
 
 // Main function to initialize a new project
@@ -586,26 +654,28 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 		));
 	}
 
-	// Create required directories for all modes
-	ensureDirectoryExists(path.join(targetDir, 'scripts'));
+	// Create required directories based on mode
+	// Only create tasks directory for all modes
 	ensureDirectoryExists(path.join(targetDir, 'tasks'));
 	
-	// Create Cursor directory - needed for both modes
-	ensureDirectoryExists(path.join(targetDir, '.cursor', 'rules'));
-
-	// Create Roo directories if we're in Cursor mode or if we need full compatibility
-	// This ensures Claude Code mode has the necessary structures for mappings
-	ensureDirectoryExists(path.join(targetDir, '.roo'));
-	ensureDirectoryExists(path.join(targetDir, '.roo', 'rules'));
-	for (const mode of [
-		'architect',
-		'ask',
-		'boomerang',
-		'code',
-		'debug',
-		'test'
-	]) {
-		ensureDirectoryExists(path.join(targetDir, '.roo', `rules-${mode}`));
+	// Only create Cursor and Roo directories when NOT in Claude Code mode
+	if (!isClaudeCodeMode) {
+		// Create Cursor directory and rules subdirectory
+		ensureDirectoryExists(path.join(targetDir, '.cursor', 'rules'));
+		
+		// Create Roo directories
+		ensureDirectoryExists(path.join(targetDir, '.roo'));
+		ensureDirectoryExists(path.join(targetDir, '.roo', 'rules'));
+		for (const mode of [
+			'architect',
+			'ask',
+			'boomerang',
+			'code',
+			'debug',
+			'test'
+		]) {
+			ensureDirectoryExists(path.join(targetDir, '.roo', `rules-${mode}`));
+		}
 	}
 
 	// Setup MCP configuration for integration with Cursor or Claude Code
@@ -644,13 +714,6 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 	const replacements = {
 		year: new Date().getFullYear()
 	};
-
-	// Copy .env.example
-	copyTemplateFile(
-		'env.example',
-		path.join(targetDir, '.env.example'),
-		replacements
-	);
 
 	// Get the current working directory name to use as project name
 	const dirName = path.basename(targetDir);
@@ -708,9 +771,6 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 		log('info', 'Skipping Roo/Cursor rules generation in Claude Code mode');
 	}
 
-	// Copy .windsurfrules (keep this in all modes)
-	copyTemplateFile('.clauderules', path.join(targetDir, '.clauderules'));
-
 	// Copy Roo rule files for each mode (skip in Claude Code mode)
 	if (!isClaudeCodeMode) {
 		copyTemplateFile('windsurfrules', path.join(targetDir, '.windsurfrules'));
@@ -729,13 +789,6 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 		'example_prd.md',
 		path.join(targetDir, 'example_prd.md')
 	);
-
-	// // Create main README.md
-	// copyTemplateFile(
-	// 	'README-task-master.md',
-	// 	path.join(targetDir, 'README-task-master.md'),
-	// 	replacements
-	// );
 
 	// Initialize git repository if git is available
 	try {
@@ -772,85 +825,30 @@ function createProjectStructure(targetDir, addAliases, dryRun) {
 	}
 
 	// === Add Model Configuration Step ===
-	if (!isSilentMode() && !dryRun) {
-		// Handle both Claude Code and standard modes for model setup
-		// if (isClaudeCodeMode) {
-		// 	console.log(
-		// 		boxen(chalk.cyan('Claude Code API Setup'), {
-		// 			padding: 0.5,
-		// 			margin: { top: 1, bottom: 0.5 },
-		// 			borderStyle: 'round',
-		// 			borderColor: 'blue'
-		// 		})
-		// 	);
-			
-		// 	// First ensure task-master-ai is installed locally
-		// 	log('info', 'Installing task-master-ai package for model setup...');
-		// 	try {
-		// 		execSync('npm install --no-save task-master-ai', {
-		// 			stdio: 'inherit',
-		// 			cwd: targetDir
-		// 		});
-		// 		log('success', 'Local package installed for model setup.');
-			
-		// 		// Now run the interactive setup
-		// 		log('info', 'Running interactive model setup for Claude Code mode...');
-		// 		try {
-		// 			execSync('npx task-master models --setup --claude-code-mode', { 
-		// 				stdio: 'inherit',
-		// 				cwd: targetDir,
-		// 				env: { ...process.env, CLAUDE_CODE_MODE: 'true' } 
-		// 			});
-		// 			log('success', 'AI Models configured.');
-		// 		} catch (setupError) {
-		// 			log('error', 'Failed to configure AI models:', setupError.message);
-		// 			log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
-		// 			log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
-		// 			log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
-		// 		}
-		// 	} catch (installError) {
-		// 		log('error', 'Failed to install local package:', installError.message);
-		// 		log('info', 'You can still use Task Master by setting API keys directly in your .env file:');
-		// 		log('info', '  ANTHROPIC_API_KEY=your_anthropic_key_here');
-		// 		log('info', '  PERPLEXITY_API_KEY=your_perplexity_key_here (optional)');
-				
-		// 	}
-		// } else {
-			// Standard model setup for non-Claude Code mode
-			console.log(
-				boxen(chalk.cyan('Configuring AI Models...'), {
-					padding: 0.5,
-					margin: { top: 1, bottom: 0.5 },
-					borderStyle: 'round',
-					borderColor: 'blue'
-				})
-			);
-			log(
-				'info',
-				'Running interactive model setup. Please select your preferred AI models.'
-			);
-			try {
-				execSync('task-master models --setup', {
-					stdio: 'inherit',
-					cwd: targetDir
-				});
-				log('success', 'AI Models configured.');
-			} catch (error) {
-				log('error', `Failed to configure AI models: ${error.message}`);
-				log('warn', 'You may need to run "task-master models --setup" manually.');
-			}
+if (!isSilentMode() && !dryRun) {
+		console.log(
+			boxen(chalk.cyan('Configuring AI Models...'), {
+				padding: 0.5,
+				margin: { top: 1, bottom: 0.5 },
+				borderStyle: 'round',
+				borderColor: 'blue'
+			})
+		);
+		log(
+			'info',
+			'Running interactive model setup. Please select your preferred AI models.'
+		);
+		try {
+			execSync('task-master models --setup', {
+				stdio: 'inherit',
+				cwd: targetDir
+			});
+			log('success', 'AI Models configured.');
+		} catch (error) {
+			log('error', `Failed to configure AI models: ${error.message}`);
+			log('warn', 'You may need to run "task-master models --setup" manually.');
 		}
-	// } else if (isSilentMode() && !dryRun) {
-	// 	log('info', 'Skipping interactive model setup in silent (MCP) mode.');
-	// 	log(
-	// 		'warn',
-	// 		'Please configure AI models using "task-master models --set-..." or the "models" MCP tool.'
-	// 	);
-	// } else if (dryRun) {
-	// 	log('info', 'DRY RUN: Skipping interactive model setup.');
-	// }
-	// ====================================
-
+	}
 	// Display success message
 	if (!isSilentMode()) {
 		console.log(
@@ -970,11 +968,10 @@ function setupMCPConfiguration(targetDir) {
 	// Create .cursor directory if it doesn't exist
 	ensureDirectoryExists(mcpDirPath);
 
-	// New MCP config to be added - references the installed package
+	// New MCP config to be added - references the locally installed package
 	const newMCPServer = {
 		'task-master-ai': {
-			command: 'npx',
-			args: ['-y', '--package=task-master-ai', 'task-master-ai'],
+			command: 'task-master-ai',
 			env: {
 				ANTHROPIC_API_KEY: 'ANTHROPIC_API_KEY_HERE',
 				PERPLEXITY_API_KEY: 'PERPLEXITY_API_KEY_HERE',
@@ -1070,42 +1067,68 @@ function setupMCPConfiguration(targetDir) {
 }
 
 /**
- * Setup configuration for Claude Code integration 
- * @param {string} targetDir - Target directory for the project
- */
-function setupClaudeCodeConfiguration(targetDir) {
-	log('info', 'Setting up Claude Code integration...');
-	
-	initializeClaudeCodeDirectly(targetDir);
-
-}
-
-/**
  * Execute Claude Code initialization directly without imports
  * @param {string} targetDir - Project directory
  */
-function initializeClaudeCodeDirectly(targetDir) {
-	// Ensure CLAUDE.md exists with placeholder
+function setupClaudeCodeConfiguration(targetDir) {
+	// Read CLAUDE_RULES.md content
+	const rulesPath = path.join(__dirname, '..', 'assets', 'CLAUDE_RULES.md');
+	let rulesContent = '';
+	
+	if (fs.existsSync(rulesPath)) {
+		const fileContent = fs.readFileSync(rulesPath, 'utf8');
+		// Extract just the RULES content
+		const rulesMatch = fileContent.match(/<RULES>([\s\S]*)<\/RULES>/);
+		if (rulesMatch) {
+			rulesContent = rulesMatch[0]; // Full RULES tags with content
+		} else {
+			// If no RULES tags in source, wrap the entire content
+			rulesContent = `<RULES>\n${fileContent}\n</RULES>`;
+		}
+	} else {
+		log('error', 'CLAUDE_RULES.md not found');
+		rulesContent = '<RULES>\n\n</RULES>';
+	}
+	
+	// Ensure CLAUDE.md exists with RULES content
 	const claudeMdPath = path.join(targetDir, 'CLAUDE.md');
 	
 	if (!fs.existsSync(claudeMdPath)) {
-		// Create default CLAUDE.md with task-master placeholder
+		// Create default CLAUDE.md with RULES content and TASKS
 		const defaultContent = `# CLAUDE.md
 
-This file contains context information for Claude.
+${rulesContent}
 
-<task-master-dynamic-content></task-master-dynamic-content>
+<TASKS></TASKS>
 `;
 		fs.writeFileSync(claudeMdPath, defaultContent, 'utf8');
-		log('info', 'Created CLAUDE.md with Task Master placeholder');
+		log('info', 'Created CLAUDE.md with RULES content and TASKS tags');
 	} else {
-		// Check if placeholder exists and add if needed
-		const content = fs.readFileSync(claudeMdPath, 'utf8');
-		if (!content.includes('<task-master-dynamic-content>')) {
-			const updatedContent = content + `\n\n<task-master-dynamic-content></task-master-dynamic-content>\n`;
-			fs.writeFileSync(claudeMdPath, updatedContent, 'utf8');
-			log('info', 'Added Task Master placeholder to existing CLAUDE.md');
+		// File exists, update RULES content if needed
+		let content = fs.readFileSync(claudeMdPath, 'utf8');
+		
+		// Check if RULES tags exist
+		if (content.includes('<RULES>')) {
+			// Replace existing RULES content
+			content = content.replace(/<RULES>[\s\S]*<\/RULES>/, rulesContent);
+			log('info', 'Updated existing RULES content in CLAUDE.md');
+		} else {
+			// Add RULES content before TASKS if TASKS exists, otherwise at the end
+			if (content.includes('<TASKS>')) {
+				content = content.replace('<TASKS>', `${rulesContent}\n\n<TASKS>`);
+			} else {
+				content = content.trim() + '\n\n' + rulesContent + '\n\n<TASKS>\n\n</TASKS>\n';
+			}
+			log('info', 'Added RULES content to existing CLAUDE.md');
 		}
+		
+		// Ensure TASKS tags exist
+		if (!content.includes('<TASKS>')) {
+			content = content.trim() + '\n\n<TASKS>\n\n</TASKS>\n';
+			log('info', 'Added TASKS tags to CLAUDE.md');
+		}
+		
+		fs.writeFileSync(claudeMdPath, content, 'utf8');
 	}
 	
 	log('info', 'Claude Code integration setup completed');
@@ -1136,10 +1159,8 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 	const claudeCodeMCPConfig = {
 		mcpServers: {
 			'mem0-memory': {
-				command: 'node',
-				args: [
-					path.join(os.homedir(), 'Documents', 'GitHub', 'mem0-mcp', 'node', 'mem0', 'build', 'index.js')
-				],
+				command: 'npx',
+				args: ['-y', '@mem0/mcp-server'],
 				env: {
 					MEM0_API_KEY: mem0ApiKey, // Use actual value
 					DEFAULT_USER_ID: defaultUserId // Use actual value
@@ -1150,16 +1171,21 @@ function setupClaudeCodeMCPConfiguration(targetDir) {
 				transportType: 'stdio'
 			},
 			'taskmaster-ai': {
-				command: 'node',
-				args: [
-					path.join(os.homedir(), 'Documents', 'GitHub', 'claude-task-master', 'mcp-server', 'server.js'),
-				],
+				command: 'task-master-ai',
 				autoApprove: '*',
 				env: {
 					ANTHROPIC_API_KEY: anthropicApiKey, // Use actual value
 					PERPLEXITY_API_KEY: perplexityApiKey, // Use actual value
 					CLAUDE_CODE_MODE: 'true' // Explicitly set environment variable as well
 				}
+			},
+			'playwright-mcp': {
+				command: 'npx',
+				args: ['@playwright/mcp@latest'],
+				disabled: false,
+				autoApprove: '*',
+				env: {},
+				transportType: 'stdio'
 			}
 		}
 	};

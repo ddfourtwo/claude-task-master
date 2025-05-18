@@ -7,14 +7,14 @@ import fs from 'fs/promises';
 import path from 'path';
 
 // Configuration constants
-const CLAUDE_RULES_PATH = path.join(process.cwd(), '.clauderules');
+const CLAUDE_RULES_PATH = path.join(process.cwd(), 'CLAUDE_RULES.md');
 const TASKS_JSON_PATH = path.join(process.cwd(), 'tasks/tasks.json');
 
 let dynamicTaskMasterContent = '';
 
 /**
  * Task Master Plugin for Claude Code Router
- * - Generates dynamic content from .clauderules and tasks/tasks.json
+ * - Generates dynamic content from CLAUDE_RULES.md and tasks/tasks.json
  */
 export default {
   name: 'taskMasterPlugin',
@@ -22,7 +22,7 @@ export default {
 
   /**
    * Initialize the plugin
-   * Reads .clauderules and tasks/tasks.json and generates dynamic content
+   * Reads CLAUDE_RULES.md and tasks/tasks.json and generates dynamic content
    */
   async initialize() {
     // console.log('Initializing Task Master Plugin for Claude Code');
@@ -31,14 +31,14 @@ export default {
       let claudeRulesContent = '';
       let tasksJsonContent = '';
 
-      // Read .clauderules
+      // Read CLAUDE_RULES.md
       try {
         claudeRulesContent = await fs.readFile(CLAUDE_RULES_PATH, 'utf8');
         // Replace 'windsurf' with 'claude' in the content
-        // console.log('.clauderules read and processed successfully.');
+        // console.log('CLAUDE_RULES.md read and processed successfully.');
       } catch (error) {
-        console.warn(`Warning: Could not read or process .clauderules at ${CLAUDE_RULES_PATH}: ${error.message}`);
-        claudeRulesContent = 'Error reading or processing .clauderules.';
+        console.warn(`Warning: Could not read or process CLAUDE_RULES.md at ${CLAUDE_RULES_PATH}: ${error.message}`);
+        claudeRulesContent = 'Error reading or processing CLAUDE_RULES.md.';
       }
 
       // Read tasks/tasks.json

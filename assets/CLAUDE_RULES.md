@@ -1,3 +1,4 @@
+<RULES>
 Below you will find a variety of important rules spanning:
 - core development philosophy
 - test-driven development approach
@@ -498,11 +499,11 @@ Note: Current task state and progress are managed through the TaskMaster system 
   - Ensure new code maintains defined separation of concerns
 
 ---
-CLAUDE_RULES
+CLAUDE.md
 ---
-description: Guidelines for creating and maintaining Claude rules to ensure consistency and effectiveness.
-globs: .clauderules
-filesToApplyRule: .clauderules
+description: Guidelines for creating and maintaining CLAUDE.md RULES to ensure consistency and effectiveness.
+globs: CLAUDE.md
+filesToApplyRule: CLAUDE.md
 alwaysApply: true
 ---
 The below describes how you should be structuring new rule sections in this document.
@@ -521,7 +522,7 @@ The below describes how you should be structuring new rule sections in this docu
 
 - **Section References:**
   - Use `ALL_CAPS_SECTION` to reference files
-  - Example: `CLAUDE_RULES`
+  - Example: `CLAUDE.md`
 
 - **Code Examples:**
   - Use language-specific code blocks
@@ -597,7 +598,7 @@ alwaysApply: true
     where: { status: 'ACTIVE' }
   });
   
-  // Consider adding a PRISMA section in the .clauderules:
+  // Consider adding a PRISMA section in the CLAUDE.md file:
   // - Standard select fields
   // - Common where conditions
   // - Performance optimization patterns
@@ -628,4 +629,4 @@ alwaysApply: true
   - Maintain links between related rules
   - Document breaking changes
 
-Follow CLAUDE_RULES for proper rule formatting and structure of claude rule sections.
+</RULES>

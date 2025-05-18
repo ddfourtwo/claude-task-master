@@ -66,3 +66,4 @@ dev-debug.log
 .npmrc
 
 **/.claude/settings.local.json
+.env.bak

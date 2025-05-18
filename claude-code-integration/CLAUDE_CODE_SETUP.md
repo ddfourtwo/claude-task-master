@@ -84,7 +84,6 @@ For a complete list of commands, use `task-master --help`.
 
 ## Troubleshooting
 
-- If Task Master content doesn't appear in Claude's responses, make sure the `CLAUDE.md` file has the `<task-master-dynamic-content>` placeholder tags.
 - Check that your API keys are correctly set in the `.env` file.
 - Ensure your Claude Code integration is enabled and working by testing other dynamic content.
 
